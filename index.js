@@ -32,7 +32,7 @@ client.on("data", function (data) {
     msg.transmission_type === sbs1.TransmissionType.ES_AIRBORNE_POS
   ) {
     console.log(
-      "Aircraft ID", msg.aircraft_id,
+      "Aircraft ID", msg.hex_ident,
       "flight ID: ", msg.flight_id,
       "date: ", msg.logged_date,
       "time: ", msg.logged_time,
