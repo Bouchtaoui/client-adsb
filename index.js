@@ -15,10 +15,34 @@ redisClient.on("error", (err) => console.log("Redis Client Error", err));
 redisClient.on("connect", () => {
   // connect with dump1090
   client.connect(port, host, function () {
-    console.log("Connected");
+    console.log("Connected with Redis");
     client.write("Connected From Client " + client.address().address);
   });
 });
+
+const subscriber = redisClient.duplicate();
+const publisher = redisClient.duplicate();
+
+(async () => {
+  try {
+    await subscriber.connect();
+    console.log("Subscriber connected!");
+
+    await publisher.connect();
+    console.log("Publisher connected!");
+  } catch (error) {
+    console.log("Pub/Sub: ", error);
+  }
+
+  try {
+    await subscriber.subscribe("airplane", (plane) => {
+      console.log(JSON.parse(plane));
+    });
+    console.log("Pub/Sub subscribed!");
+  } catch (error) {
+    console.log("Subscribing: ", error);
+  }
+})();
 
 function extractString(message) {
   //   const yetAnotherString = "MyLongString:StringIWant;";
@@ -56,8 +80,7 @@ client.on("close", function () {
   console.log("Connection closed");
 });
 
-async function updateRedis(data) {
-  const {generated_timestamp, logged_timestamp, stringify, ...msg} = data;
+async function updateRedis(msg) {
   // find object based on hex_id
   const json = await redisClient.get(msg.hex_ident);
   if (!json) {
@@ -73,5 +96,11 @@ async function updateRedis(data) {
   }
   await redisClient.set(msg.hex_ident, JSON.stringify(plane));
 
-  console.log(plane);
+  if(msg.lat) publishMsg(plane);
+
+  // console.log(plane);
+}
+
+async function publishMsg(msg) {
+  if (publisher.isReady) await publisher.publish("airplane", JSON.stringify(msg));
 }
